@@ -3,202 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Completo de Resíduos</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Dashboard Sustentabilidade - Full Data</title>
     <style>
         :root {
-            --color-plastico: #ef4444; /* Vermelho */
-            --color-papel: #3b82f6;    /* Azul */
-            --color-vidro: #10b981;    /* Verde */
-            --color-metal: #eab308;    /* Amarelo */
+            --color-plastico: #ef4444; --color-papel: #3b82f6;
+            --color-vidro: #10b981; --color-metal: #eab308;
         }
-        body { font-family: 'Segoe UI', sans-serif; background-color: #f1f5f9; color: #1e293b; margin: 0; padding: 20px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f1f5f9; color: #1e293b; margin: 0; padding: 20px; }
         .container { max-width: 1100px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h1, h2 { color: #0f172a; }
-        h2 { font-size: 18px; margin-top: 40px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+        h1 { font-size: 22px; color: #0f172a; margin-bottom: 5px; }
+        .subtitle { color: #64748b; font-size: 14px; margin-bottom: 25px; }
+
+        .state-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 20px 0; background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; }
+        .state-card { text-align: center; border-right: 1px solid #e2e8f0; padding: 5px; }
+        .state-card:last-child { border-right: none; }
+        .state-card span { display: block; font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: bold; margin-bottom: 5px; }
+        .state-card b { font-size: 16px; }
+
+        .filter-section { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
+        select { padding: 10px 15px; border-radius: 8px; border: 1px solid #cbd5e1; background: white; font-weight: bold; color: #1e293b; cursor: pointer; }
         
-        /* Gráfico e Cards */
-        .chart-container { height: 350px; margin-bottom: 30px; }
-        .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 30px; }
-        .card { padding: 15px; border-radius: 8px; border-left: 4px solid #cbd5e1; background: #f8fafc; }
-        .card.plastico { border-left-color: var(--color-plastico); }
-        .card.papel { border-left-color: var(--color-papel); }
-        .card.vidro { border-left-color: var(--color-vidro); }
-        .card.metal { border-left-color: var(--color-metal); }
-        .card-value { font-size: 18px; font-weight: bold; display: block; }
-
-        /* Tabelas */
-        .table-wrapper { overflow-x: auto; margin-top: 15px; border: 1px solid #e2e8f0; border-radius: 8px; }
+        .table-wrapper { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; margin-top: 10px; }
         table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        th { background: #f8fafc; padding: 10px; text-align: right; border-bottom: 2px solid #e2e8f0; text-transform: uppercase; color: #64748b; }
-        th:first-child { text-align: left; }
-        td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; text-align: right; }
-        td:first-child { text-align: left; font-weight: 500; }
-
-        /* Filtro de Operadores */
-        .filter-section { margin-top: 30px; background: #f8fafc; padding: 15px; border-radius: 8px; display: flex; align-items: center; gap: 15px; }
-        select { padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; cursor: pointer; }
-
+        th { background: #f8fafc; padding: 12px; text-align: right; border-bottom: 2px solid #e2e8f0; color: #475569; text-transform: uppercase; font-size: 10px; }
+        th:nth-child(1), th:nth-child(2) { text-align: left; }
+        td { padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: right; }
+        td:nth-child(2) { text-align: left; }
+        
+        tr.excluded { opacity: 0.3; background: #f1f5f9; filter: grayscale(1); }
         .text-plastico { color: var(--color-plastico); font-weight: 600; }
         .text-papel { color: var(--color-papel); font-weight: 600; }
         .text-vidro { color: var(--color-vidro); font-weight: 600; }
         .text-metal { color: var(--color-metal); font-weight: 600; }
+        .badge-cnpj { display: block; font-size: 9px; color: #94a3b8; font-weight: normal; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Relatório Consolidado de Resíduos</h1>
+    <h1>Relatório de Operadores por Estado</h1>
+    <p class="subtitle">Análise de produtividade média mensal (Incluindo SP e SC)</p>
 
-    <div class="summary-cards">
-        <div class="card plastico"><span>Plástico Total</span><span class="card-value text-plastico">8.495 t</span></div>
-        <div class="card papel"><span>Papel Total</span><span class="card-value text-papel">10.248 t</span></div>
-        <div class="card vidro"><span>Vidro Total</span><span class="card-value text-vidro">1.514 t</span></div>
-        <div class="card metal"><span>Metal Total</span><span class="card-value text-metal">735 t</span></div>
-    </div>
-
-    <div class="chart-container">
-        <canvas id="mainChart"></canvas>
-    </div>
-
-    <h2>Detalhamento por Operador</h2>
     <div class="filter-section">
-        <label for="stateSelector"><b>Selecione o Estado:</b></label>
-        <select id="stateSelector" onchange="updateOperatorTable()">
-            <option value="AC">Acre (AC)</option>
-            <option value="AM">Amazonas (AM)</option>
-            <option value="BA">Bahia (BA)</option>
-            <option value="GO">Goiás (GO)</option>
-            <option value="MG">Minas Gerais (MG)</option>
-            <option value="MS">Mato Grosso do Sul (MS)</option>
-            <option value="MT">Mato Grosso (MT)</option>
-            <option value="PA">Pará (PA)</option>
-            <option value="PR">Paraná (PR)</option>
-        </select>
-        <span id="opCount" style="font-size: 12px; color: #64748b;"></span>
+        <label><b>Estado:</b></label>
+        <select id="stateSelector" onchange="loadState()"></select>
+        <span id="opCounter" style="font-size: 12px; color: #64748b;"></span>
+    </div>
+
+    <div class="state-summary">
+        <div class="state-card"><span>Média Plástico</span><b id="avg-pl" class="text-plastico">0.00</b></div>
+        <div class="state-card"><span>Média Papel</span><b id="avg-pa" class="text-papel">0.00</b></div>
+        <div class="state-card"><span>Média Vidro</span><b id="avg-vi" class="text-vidro">0.00</b></div>
+        <div class="state-card"><span>Média Metal</span><b id="avg-me" class="text-metal">0.00</b></div>
+        <div class="state-card"><span>Total Médio</span><b id="avg-total" style="color:#0f172a">0.00</b></div>
     </div>
 
     <div class="table-wrapper">
-        <table id="operatorTable">
+        <table>
             <thead>
                 <tr>
-                    <th style="text-align:left">Nome do Operador / CNPJ</th>
-                    <th class="text-plastico">Plástico (t/mês)</th>
-                    <th class="text-papel">Papel (t/mês)</th>
-                    <th class="text-vidro">Vidro (t/mês)</th>
-                    <th class="text-metal">Metal (t/mês)</th>
-                    <th>Total Médio</th>
+                    <th style="width: 30px;">Inc.</th>
+                    <th>Operador / CNPJ</th>
+                    <th class="text-plastico">Plástico (t)</th>
+                    <th class="text-papel">Papel (t)</th>
+                    <th class="text-vidro">Vidro (t)</th>
+                    <th class="text-metal">Metal (t)</th>
+                    <th>Total</th>
                 </tr>
             </thead>
-            <tbody id="operatorBody">
-                </tbody>
+            <tbody id="opBody"></tbody>
         </table>
     </div>
 </div>
 
 <script>
-    // Dados extraídos do arquivo original
-    const MONTHLY_DATA = [
-        {p: "Jan/25", pl: 761.038, pa: 394.903, vi: 71.050, me: 11.101},
-        {p: "Fev/25", pl: 195.117, pa: 174.299, vi: 27.194, me: 26.452},
-        {p: "Mar/25", pl: 534.363, pa: 244.486, vi: 33.250, me: 16.180},
-        {p: "Abr/25", pl: 403.436, pa: 368.426, vi: 85.642, me: 32.017},
-        {p: "Mai/25", pl: 619.149, pa: 507.119, vi: 35.283, me: 55.191},
-        {p: "Jun/25", pl: 1190.217, pa: 958.709, vi: 349.823, me: 63.458},
-        {p: "Jul/25", pl: 675.291, pa: 814.244, vi: 211.134, me: 77.279},
-        {p: "Ago/25", pl: 499.008, pa: 706.041, vi: 161.971, me: 63.171},
-        {p: "Set/25", pl: 838.028, pa: 1233.387, vi: 133.381, me: 91.679},
-        {p: "Out/25", pl: 563.498, pa: 1109.977, vi: 91.470, me: 68.783},
-        {p: "Nov/25", pl: 787.928, pa: 1750.376, vi: 122.567, me: 98.189},
-        {p: "Dez/25", pl: 717.049, pa: 1300.745, vi: 165.733, me: 102.516},
-        {p: "Jan/26", pl: 366.996, pa: 1053.484, vi: 49.879, me: 79.601},
-        {p: "Fev/26", pl: 923.608, pa: 1159.783, vi: 109.880, me: 89.733}
-    ];
-
-    const OPS = {
-        "AC": [{nome: "COOPSUL", cnpj: "23.718.606/0001-62", media: {pl: 1.59, pa: 12.0, vi: 0.0, me: 0.0}}],
+    const OPS_DATABASE = {
+        "AC": [{nome: "COOPSUL", cnpj: "23.718.606/0001-62", media: {pl: 1.59, pa: 12.0, vi: 0, me: 0}}],
         "AM": [
-            {nome: "ASCARMAN", cnpj: "29.108.455/0001-07", media: {pl: 8.67, pa: 64.1, vi: 0.0, me: 0.0}},
-            {nome: "IRPAAM", cnpj: "14.554.344/0001-57", media: {pl: 57.39, pa: 0.0, vi: 0.0, me: 0.0}},
-            {nome: "A.C.R.P.", cnpj: "35.182.288/0001-47", media: {pl: 5.72, pa: 0.0, vi: 0.0, me: 0.0}}
+            {nome: "ASCARMAN", cnpj: "29.108.455/0001-07", media: {pl: 8.67, pa: 64.1, vi: 0, me: 0}},
+            {nome: "IRPAAM", cnpj: "14.554.344/0001-57", media: {pl: 57.39, pa: 0, vi: 0, me: 0}},
+            {nome: "A.C.R.P.", cnpj: "35.182.288/0001-47", media: {pl: 5.72, pa: 0, vi: 0, me: 0}}
         ],
         "BA": [
             {nome: "ASSOCIAÇÃO GOTA DO ÓLEO", cnpj: "25.006.288/0001-32", media: {pl: 1.59, pa: 7.61, vi: 2.93, me: 1.67}},
-            {nome: "CRG-BA", cnpj: "08.864.519/0001-20", media: {pl: 35.82, pa: 0.0, vi: 0.0, me: 0.0}},
-            {nome: "ACM - Ibipitanga", cnpj: "33.544.437/0001-45", media: {pl: 0.12, pa: 1.01, vi: 0.0, me: 0.04}},
+            {nome: "CRG-BA", cnpj: "08.864.519/0001-20", media: {pl: 35.82, pa: 0, vi: 0, me: 0}},
+            {nome: "ACM - Ibipitanga", cnpj: "33.544.437/0001-45", media: {pl: 0.12, pa: 1.01, vi: 0, me: 0.04}},
             {nome: "COOPERES", cnpj: "13.086.513/0001-09", media: {pl: 0.36, pa: 3.19, vi: 0.69, me: 0.55}}
         ],
         "GO": [
-            {nome: "COOPERATIVA GOIANÁPOLIS", cnpj: "55.982.076/0001-51", media: {pl: 43.3, pa: 20.6, vi: 0.0, me: 2.4}},
-            {nome: "COOPEROSA", cnpj: "49.412.071/0001-27", media: {pl: 22.5, pa: 7.0, vi: 1.8, me: 0.0}}
+            {nome: "COOPERATIVA GOIANÁPOLIS", cnpj: "55.982.076/0001-51", media: {pl: 43.3, pa: 20.6, vi: 0, me: 2.4}},
+            {nome: "COOPEROSA", cnpj: "49.412.071/0001-27", media: {pl: 22.5, pa: 7.0, vi: 1.8, me: 0}}
         ],
         "MG": [
-            {nome: "ASCRAP", cnpj: "50.859.742/0001-45", media: {pl: 52.8, pa: 115.7, vi: 0.0, me: 0.0}},
-            {nome: "ASSOSSUL", cnpj: "11.113.688/0001-32", media: {pl: 23.5, pa: 83.2, vi: 4.24, me: 0.0}}
+            {nome: "ASCRAP", cnpj: "50.859.742/0001-45", media: {pl: 52.8, pa: 115.7, vi: 0, me: 0}},
+            {nome: "ASSOSSUL", cnpj: "11.113.688/0001-32", media: {pl: 23.5, pa: 83.2, vi: 4.24, me: 0}}
         ],
         "MS": [{nome: "COOPERNAS", cnpj: "28.934.414/0001-07", media: {pl: 1.23, pa: 7.83, vi: 0.72, me: 0.35}}],
         "MT": [
-            {nome: "ASSCAVAG", cnpj: "10.921.355/0001-77", media: {pl: 15.5, pa: 36.8, vi: 7.1, me: 0.0}},
+            {nome: "ASSCAVAG", cnpj: "10.921.355/0001-77", media: {pl: 15.5, pa: 36.8, vi: 7.1, me: 0}},
             {nome: "COOPERACAMARC", cnpj: "42.457.103/0001-25", media: {pl: 9.83, pa: 30.92, vi: 14.33, me: 5.03}}
         ],
         "PA": [
-            {nome: "Coopenorte", cnpj: "25.117.580/0001-22", media: {pl: 3.62, pa: 150.3, vi: 0.0, me: 0.09}},
-            {nome: "COREMA", cnpj: "37.257.564/0001-14", media: {pl: 9.88, pa: 18.0, vi: 0.0, me: 3.18}}
-        ],
-        "PR": [
-            {nome: "JANDAIA", cnpj: "21.977.543/0001-33", media: {pl: 5.89, pa: 10.32, vi: 3.49, me: 1.24}},
-            {nome: "GUARAPUAVA", cnpj: "00.832.151/0001-06", media: {pl: 26.1, pa: 0.0, vi: 0.0, me: 0.0}},
-            {nome: "AMIGOS DA NATUREZA", cnpj: "26.525.944/0001-76", media: {pl: 4.42, pa: 7.39, vi: 3.32, me: 0.61}}
-        ]
-    };
-
-    function updateOperatorTable() {
-        const state = document.getElementById('stateSelector').value;
-        const operators = OPS[state] || [];
-        const tbody = document.getElementById('operatorBody');
-        const countSpan = document.getElementById('opCount');
-        
-        tbody.innerHTML = '';
-        countSpan.innerText = `(${operators.length} operadores encontrados)`;
-
-        operators.forEach(op => {
-            const total = (op.media.pl + op.media.pa + op.media.vi + op.media.me).toFixed(2);
-            const row = `<tr>
-                <td><div><b>${op.nome}</b></div><div style="font-size:10px; color:#64748b">${op.cnpj}</div></td>
-                <td class="text-plastico">${op.media.pl.toFixed(2)}</td>
-                <td class="text-papel">${op.media.pa.toFixed(2)}</td>
-                <td class="text-vidro">${op.media.vi.toFixed(2)}</td>
-                <td class="text-metal">${op.media.me.toFixed(2)}</td>
-                <td style="font-weight:bold; background:#f8fafc">${total}</td>
-            </tr>`;
-            tbody.innerHTML += row;
-        });
-    }
-
-    // Inicialização
-    window.onload = () => {
-        updateOperatorTable();
-        const ctx = document.getElementById('mainChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: MONTHLY_DATA.map(d => d.p),
-                datasets: [
-                    { label: 'Plástico', data: MONTHLY_DATA.map(d => d.pl), backgroundColor: '#ef4444' },
-                    { label: 'Papel', data: MONTHLY_DATA.map(d => d.pa), backgroundColor: '#3b82f6' },
-                    { label: 'Vidro', data: MONTHLY_DATA.map(d => d.vi), backgroundColor: '#10b981' },
-                    { label: 'Metal', data: MONTHLY_DATA.map(d => d.me), backgroundColor: '#eab308' }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { y: { stacked: true }, x: { stacked: true } },
-                plugins: { legend: { position: 'bottom' } }
-            }
-        });
-    };
-</script>
-
-</body>
-</html>
+            {nome: "COOPENORTE", cnpj: "25.117.580/0001-22", media: {pl: 3.62, pa: 150.3, vi: 0, me: 0.09}},
+            {nome: "COREMA", cnpj: "37.257.564/0001-14", media: {pl: 9.88, pa: 1
