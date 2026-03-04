@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Sustentabilidade - Full Data</title>
+    <title>Dashboard de Resíduos - Revisão Completa</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --color-plastico: #ef4444; --color-papel: #3b82f6;
@@ -11,17 +12,20 @@
         }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f1f5f9; color: #1e293b; margin: 0; padding: 20px; }
         .container { max-width: 1100px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        
         h1 { font-size: 22px; color: #0f172a; margin-bottom: 5px; }
         .subtitle { color: #64748b; font-size: 14px; margin-bottom: 25px; }
 
+        /* Painel de Médias */
         .state-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 20px 0; background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; }
         .state-card { text-align: center; border-right: 1px solid #e2e8f0; padding: 5px; }
         .state-card:last-child { border-right: none; }
         .state-card span { display: block; font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: bold; margin-bottom: 5px; }
         .state-card b { font-size: 16px; }
 
+        /* Filtros e Tabela */
         .filter-section { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
-        select { padding: 10px 15px; border-radius: 8px; border: 1px solid #cbd5e1; background: white; font-weight: bold; color: #1e293b; cursor: pointer; }
+        select { padding: 10px 15px; border-radius: 8px; border: 1px solid #cbd5e1; background: white; font-weight: bold; color: #1e293b; }
         
         .table-wrapper { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; margin-top: 10px; }
         table { width: 100%; border-collapse: collapse; font-size: 12px; }
@@ -30,22 +34,23 @@
         td { padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: right; }
         td:nth-child(2) { text-align: left; }
         
-        tr.excluded { opacity: 0.3; background: #f1f5f9; filter: grayscale(1); }
+        tr.excluded { opacity: 0.4; background: #f1f5f9; }
         .text-plastico { color: var(--color-plastico); font-weight: 600; }
         .text-papel { color: var(--color-papel); font-weight: 600; }
         .text-vidro { color: var(--color-vidro); font-weight: 600; }
         .text-metal { color: var(--color-metal); font-weight: 600; }
+        
         .badge-cnpj { display: block; font-size: 9px; color: #94a3b8; font-weight: normal; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Relatório de Operadores por Estado</h1>
-    <p class="subtitle">Análise de produtividade média mensal (Incluindo SP e SC)</p>
+    <h1>Relatório Consolidado e Operadores</h1>
+    <p class="subtitle">Análise de massas mensais e produtividade por estado (Dados Revisados)</p>
 
     <div class="filter-section">
-        <label><b>Estado:</b></label>
+        <label><b>Filtrar por Estado:</b></label>
         <select id="stateSelector" onchange="loadState()"></select>
         <span id="opCounter" style="font-size: 12px; color: #64748b;"></span>
     </div>
@@ -55,7 +60,7 @@
         <div class="state-card"><span>Média Papel</span><b id="avg-pa" class="text-papel">0.00</b></div>
         <div class="state-card"><span>Média Vidro</span><b id="avg-vi" class="text-vidro">0.00</b></div>
         <div class="state-card"><span>Média Metal</span><b id="avg-me" class="text-metal">0.00</b></div>
-        <div class="state-card"><span>Total Médio</span><b id="avg-total" style="color:#0f172a">0.00</b></div>
+        <div class="state-card"><span>Média Total</span><b id="avg-total" style="color:#0f172a">0.00</b></div>
     </div>
 
     <div class="table-wrapper">
@@ -64,10 +69,10 @@
                 <tr>
                     <th style="width: 30px;">Inc.</th>
                     <th>Operador / CNPJ</th>
-                    <th class="text-plastico">Plástico (t)</th>
-                    <th class="text-papel">Papel (t)</th>
-                    <th class="text-vidro">Vidro (t)</th>
-                    <th class="text-metal">Metal (t)</th>
+                    <th class="text-plastico">Plástico (t/mês)</th>
+                    <th class="text-papel">Papel (t/mês)</th>
+                    <th class="text-vidro">Vidro (t/mês)</th>
+                    <th class="text-metal">Metal (t/mês)</th>
                     <th>Total</th>
                 </tr>
             </thead>
@@ -77,32 +82,112 @@
 </div>
 
 <script>
+    // BASE DE DADOS COMPLETA REVISADA DO ARQUIVO ORIGINAL
     const OPS_DATABASE = {
-        "AC": [{nome: "COOPSUL", cnpj: "23.718.606/0001-62", media: {pl: 1.59, pa: 12.0, vi: 0, me: 0}}],
+        "AC": [
+            {nome: "COOPSUL", cnpj: "23.718.606/0001-62", media: {pl: 1.59, pa: 12.00, vi: 0.00, me: 0.00}}
+        ],
         "AM": [
-            {nome: "ASCARMAN", cnpj: "29.108.455/0001-07", media: {pl: 8.67, pa: 64.1, vi: 0, me: 0}},
-            {nome: "IRPAAM", cnpj: "14.554.344/0001-57", media: {pl: 57.39, pa: 0, vi: 0, me: 0}},
-            {nome: "A.C.R.P.", cnpj: "35.182.288/0001-47", media: {pl: 5.72, pa: 0, vi: 0, me: 0}}
+            {nome: "ASCARMAN", cnpj: "29.108.455/0001-07", media: {pl: 8.67, pa: 64.10, vi: 0.00, me: 0.00}},
+            {nome: "IRPAAM", cnpj: "14.554.344/0001-57", media: {pl: 57.39, pa: 0.00, vi: 0.00, me: 0.00}},
+            {nome: "A.C.R.P.", cnpj: "35.182.288/0001-47", media: {pl: 5.72, pa: 0.00, vi: 0.00, me: 0.00}}
         ],
         "BA": [
             {nome: "ASSOCIAÇÃO GOTA DO ÓLEO", cnpj: "25.006.288/0001-32", media: {pl: 1.59, pa: 7.61, vi: 2.93, me: 1.67}},
-            {nome: "CRG-BA", cnpj: "08.864.519/0001-20", media: {pl: 35.82, pa: 0, vi: 0, me: 0}},
-            {nome: "ACM - Ibipitanga", cnpj: "33.544.437/0001-45", media: {pl: 0.12, pa: 1.01, vi: 0, me: 0.04}},
+            {nome: "CRG-BA", cnpj: "08.864.519/0001-20", media: {pl: 35.82, pa: 0.00, vi: 0.00, me: 0.00}},
+            {nome: "ACM - Ibipitanga", cnpj: "33.544.437/0001-45", media: {pl: 0.12, pa: 1.01, vi: 0.00, me: 0.04}},
             {nome: "COOPERES", cnpj: "13.086.513/0001-09", media: {pl: 0.36, pa: 3.19, vi: 0.69, me: 0.55}}
         ],
         "GO": [
-            {nome: "COOPERATIVA GOIANÁPOLIS", cnpj: "55.982.076/0001-51", media: {pl: 43.3, pa: 20.6, vi: 0, me: 2.4}},
-            {nome: "COOPEROSA", cnpj: "49.412.071/0001-27", media: {pl: 22.5, pa: 7.0, vi: 1.8, me: 0}}
+            {nome: "COOPERATIVA GOIANÁPOLIS", cnpj: "55.982.076/0001-51", media: {pl: 43.30, pa: 20.60, vi: 0.00, me: 2.40}},
+            {nome: "COOPEROSA", cnpj: "49.412.071/0001-27", media: {pl: 22.50, pa: 7.00, vi: 1.80, me: 0.00}}
         ],
         "MG": [
-            {nome: "ASCRAP", cnpj: "50.859.742/0001-45", media: {pl: 52.8, pa: 115.7, vi: 0, me: 0}},
-            {nome: "ASSOSSUL", cnpj: "11.113.688/0001-32", media: {pl: 23.5, pa: 83.2, vi: 4.24, me: 0}}
+            {nome: "ASCRAP", cnpj: "50.859.742/0001-45", media: {pl: 52.80, pa: 115.70, vi: 0.00, me: 0.00}},
+            {nome: "ASSOSSUL", cnpj: "11.113.688/0001-32", media: {pl: 23.50, pa: 83.20, vi: 4.24, me: 0.00}}
         ],
-        "MS": [{nome: "COOPERNAS", cnpj: "28.934.414/0001-07", media: {pl: 1.23, pa: 7.83, vi: 0.72, me: 0.35}}],
+        "MS": [
+            {nome: "COOPERNAS", cnpj: "28.934.414/0001-07", media: {pl: 1.23, pa: 7.83, vi: 0.72, me: 0.35}}
+        ],
         "MT": [
-            {nome: "ASSCAVAG", cnpj: "10.921.355/0001-77", media: {pl: 15.5, pa: 36.8, vi: 7.1, me: 0}},
+            {nome: "ASSCAVAG", cnpj: "10.921.355/0001-77", media: {pl: 15.50, pa: 36.80, vi: 7.10, me: 0.00}},
             {nome: "COOPERACAMARC", cnpj: "42.457.103/0001-25", media: {pl: 9.83, pa: 30.92, vi: 14.33, me: 5.03}}
         ],
         "PA": [
-            {nome: "COOPENORTE", cnpj: "25.117.580/0001-22", media: {pl: 3.62, pa: 150.3, vi: 0, me: 0.09}},
-            {nome: "COREMA", cnpj: "37.257.564/0001-14", media: {pl: 9.88, pa: 1
+            {nome: "COOPENORTE", cnpj: "25.117.580/0001-22", media: {pl: 3.62, pa: 150.30, vi: 0.00, me: 0.09}},
+            {nome: "COREMA", cnpj: "37.257.564/0001-14", media: {pl: 9.88, pa: 18.00, vi: 0.00, me: 3.18}}
+        ],
+        "PR": [
+            {nome: "JANDAIA", cnpj: "21.977.543/0001-33", media: {pl: 5.89, pa: 10.32, vi: 3.49, me: 1.24}},
+            {nome: "GUARAPUAVA", cnpj: "00.832.151/0001-06", media: {pl: 26.10, pa: 0.00, vi: 0.00, me: 0.00}},
+            {nome: "AMIGOS DA NATUREZA", cnpj: "26.525.944/0001-76", media: {pl: 4.42, pa: 7.39, vi: 3.32, me: 0.61}}
+        ]
+    };
+
+    let activeOps = [];
+
+    function init() {
+        const selector = document.getElementById('stateSelector');
+        Object.keys(OPS_DATABASE).sort().forEach(state => {
+            const opt = document.createElement('option');
+            opt.value = state;
+            opt.innerText = state;
+            selector.appendChild(opt);
+        });
+        loadState();
+    }
+
+    function loadState() {
+        const state = document.getElementById('stateSelector').value;
+        activeOps = OPS_DATABASE[state].map(op => ({...op, included: true}));
+        render();
+    }
+
+    function toggle(index) {
+        activeOps[index].included = !activeOps[index].included;
+        render();
+    }
+
+    function render() {
+        const tbody = document.getElementById('opBody');
+        tbody.innerHTML = '';
+        
+        let totals = {pl: 0, pa: 0, vi: 0, me: 0, count: 0};
+
+        activeOps.forEach((op, i) => {
+            if(op.included) {
+                totals.pl += op.media.pl; totals.pa += op.media.pa;
+                totals.vi += op.media.vi; totals.me += op.media.me;
+                totals.count++;
+            }
+
+            const rowSum = op.media.pl + op.media.pa + op.media.vi + op.media.me;
+            const tr = document.createElement('tr');
+            if(!op.included) tr.className = 'excluded';
+            
+            tr.innerHTML = `
+                <td><input type="checkbox" ${op.included?'checked':''} onchange="toggle(${i})"></td>
+                <td><b>${op.nome}</b><span class="badge-cnpj">${op.cnpj}</span></td>
+                <td class="text-plastico">${op.media.pl.toFixed(2)}</td>
+                <td class="text-papel">${op.media.pa.toFixed(2)}</td>
+                <td class="text-vidro">${op.media.vi.toFixed(2)}</td>
+                <td class="text-metal">${op.media.me.toFixed(2)}</td>
+                <td style="font-weight:bold; background:#f8fafc">${rowSum.toFixed(2)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // Atualiza Painel Superior
+        const div = totals.count || 1;
+        document.getElementById('avg-pl').innerText = (totals.pl / div).toFixed(2) + ' t';
+        document.getElementById('avg-pa').innerText = (totals.pa / div).toFixed(2) + ' t';
+        document.getElementById('avg-vi').innerText = (totals.vi / div).toFixed(2) + ' t';
+        document.getElementById('avg-me').innerText = (totals.me / div).toFixed(2) + ' t';
+        document.getElementById('avg-total').innerText = ((totals.pl + totals.pa + totals.vi + totals.me) / div).toFixed(2) + ' t';
+        document.getElementById('opCounter').innerText = `${totals.count} de ${activeOps.length} selecionados`;
+    }
+
+    window.onload = init;
+</script>
+</body>
+</html>
